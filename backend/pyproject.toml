@@ -8,7 +8,11 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "clickhouse-connect>=0.8.0",
     "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
 ]
+
+[project.optional-dependencies]
+gemini = ["google-genai>=1.0.0"]
 
 [build-system]
 requires = ["setuptools>=68"]

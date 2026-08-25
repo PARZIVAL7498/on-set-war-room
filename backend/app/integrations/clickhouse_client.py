@@ -7,6 +7,7 @@ client API. No business / investigation logic lives here.
 from __future__ import annotations
 
 import os
+import threading
 from functools import lru_cache
 from typing import Any
 
@@ -71,20 +72,21 @@ def get_config() -> dict[str, Any]:
     }
 
 
-_client: Client | None = None
-_client_database: str | None = None
+# clickhouse-connect sessions are not safe for concurrent queries; keep one client per thread.
+_thread_state = threading.local()
 
 
 def get_client(*, database: str | None = None) -> Client:
-    """Return a shared ClickHouse Cloud client (HTTPS/TLS)."""
-    global _client, _client_database
+    """Return a thread-local ClickHouse Cloud client (HTTPS/TLS)."""
     cfg = get_config()
     db = database if database is not None else cfg["database"]
 
-    if _client is None or _client_database != db:
-        if _client is not None:
-            _client.close()
-        _client = clickhouse_connect.get_client(
+    clients: dict[str, Client] = getattr(_thread_state, "clients", None) or {}
+    _thread_state.clients = clients
+
+    client = clients.get(db)
+    if client is None:
+        client = clickhouse_connect.get_client(
             host=cfg["host"],
             port=cfg["port"],
             username=cfg["username"],
@@ -93,16 +95,15 @@ def get_client(*, database: str | None = None) -> Client:
             secure=cfg["secure"],
             verify=True,
         )
-        _client_database = db
-    return _client
+        clients[db] = client
+    return client
 
 
 def close_client() -> None:
-    global _client, _client_database
-    if _client is not None:
-        _client.close()
-        _client = None
-        _client_database = None
+    clients: dict[str, Client] = getattr(_thread_state, "clients", None) or {}
+    for client in clients.values():
+        client.close()
+    _thread_state.clients = {}
     get_config.cache_clear()
 
 
@@ -126,3 +127,17 @@ def query(sql: str, parameters: dict[str, Any] | None = None):
 def command(sql: str, parameters: dict[str, Any] | None = None):
     """Execute a DDL/DML command."""
     return get_client().command(sql, parameters=parameters or {})
+
+
+def insert(
+    table: str,
+    rows: list[list[Any]] | list[tuple[Any, ...]],
+    column_names: list[str],
+    *,
+    database: str | None = None,
+) -> None:
+    """Insert rows into a ClickHouse table via the native insert API."""
+    if not rows:
+        return
+    client = get_client(database=database)
+    client.insert(table, rows, column_names=column_names)

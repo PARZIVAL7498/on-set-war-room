@@ -5,6 +5,7 @@ from app.integrations.clickhouse_client import (  # noqa: F401
     command,
     get_client,
     get_config,
+    insert,
     ping,
     query,
 )

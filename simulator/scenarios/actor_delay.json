@@ -1,0 +1,8 @@
+{
+  "production_id": "prod-midnight-protocol",
+  "resource_type": "actor",
+  "resource_id": "ACTOR-B",
+  "status": "DOWN",
+  "event_time": "2026-08-25T09:50:00",
+  "notes": "Actor B delayed in transit — ETA slipped past Scene 43 call"
+}

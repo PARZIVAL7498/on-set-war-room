@@ -1,0 +1,8 @@
+{
+  "production_id": "prod-midnight-protocol",
+  "resource_type": "location",
+  "resource_id": "LOC-EXTERIOR-B",
+  "status": "DOWN",
+  "event_time": "2026-08-25T14:30:00",
+  "notes": "Weather hold on Exterior Lot B — wind/rain exceeds safety envelope"
+}

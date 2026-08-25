@@ -33,10 +33,10 @@ FROM on_set_war_room.scene_requirements
 WHERE scene_number = 47
 ORDER BY requirement_type, requirement_id;
 
--- 5) Latest CAMERA-02 status event
-SELECT resource_id, status, event_time, notes
+-- 5) Latest CAMERA-02 status events (seed + ingested)
+SELECT toString(event_id) AS event_id, resource_id, status, event_time, notes
 FROM on_set_war_room.resource_status_events
 WHERE resource_type = 'equipment'
   AND resource_id = 'CAMERA-02'
 ORDER BY event_time DESC
-LIMIT 5;
+LIMIT 10;
