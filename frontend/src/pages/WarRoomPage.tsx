@@ -65,6 +65,7 @@ export default function WarRoomPage() {
   const [active, setActive] = useState<Incident | null>(null)
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([])
   const [geminiOn, setGeminiOn] = useState(false)
+  const [adkMode, setAdkMode] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -84,6 +85,7 @@ export default function WarRoomPage() {
       setIncidents(list)
       setScenarios(sc)
       setGeminiOn(gem.available)
+      setAdkMode(gem.live_llm ? 'live' : gem.mode || (gem.available ? 'tools' : ''))
       setUpdatedAt(new Date())
 
       const targetId =
@@ -160,7 +162,11 @@ export default function WarRoomPage() {
             }`}
           >
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            {geminiOn ? 'Gemini narration on' : 'Deterministic narrative'}
+            {geminiOn
+              ? adkMode === 'live'
+                ? 'ADK live LLM'
+                : 'ADK tools mode'
+              : 'ADK unavailable'}
           </span>
           <button
             type="button"

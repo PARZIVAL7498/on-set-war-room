@@ -448,8 +448,12 @@ def _parse_incident_row(row: dict[str, Any]) -> Incident:
         narrative=row.get("narrative") or "",
         timeline=timeline,
         created_at=row["created_at"],
-        gemini_used="Gemini" in (row.get("narrative") or "")
-        or any(t.agent == "pivot" and "gemini" in (t.summary or "").lower() for t in timeline),
+        gemini_used=any(
+            (t.agent or "").endswith("_agent")
+            or (t.tool or "") == "google.adk.Runner"
+            or "ADK" in (t.summary or "")
+            for t in timeline
+        ),
     )
 
 

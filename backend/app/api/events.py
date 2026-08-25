@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.agents import orchestrator
+from app.agents.orchestrator import AdkUnavailableError
 from app.schemas.events import (
     EquipmentEventIn,
     EventIngestResponse,
@@ -37,6 +38,11 @@ def _ingest(payload: ResourceEventIn, *, auto_investigate: bool) -> EventIngestR
             incident = orchestrator.run_for_ingested_event(event_id, payload)
             if incident is not None:
                 incident_id = incident.incident_id
+        except AdkUnavailableError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=str(exc),
+            ) from exc
         except event_service.IncidentStoreError as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

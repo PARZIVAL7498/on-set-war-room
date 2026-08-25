@@ -1,8 +1,8 @@
-"""Future ClickHouse MCP bridge (optional).
+"""Future ClickHouse MCP bridge.
 
-MVP investigation tools use `app.integrations.clickhouse_client` directly.
+ADK FunctionTools currently use `app.integrations.clickhouse_client` directly.
 When a ClickHouse MCP server is available, wrap the same query functions here
-so Gemini/ADK can call them as MCP tools without changing deterministic engines.
+so ADK can call them as MCP tools without changing deterministic engines.
 """
 
 from __future__ import annotations
@@ -17,5 +17,5 @@ def is_configured() -> bool:
 def describe() -> dict[str, str]:
     return {
         "status": MCP_STATUS,
-        "note": "Direct clickhouse-connect is used for MVP tools; MCP wiring deferred.",
+        "note": "ADK tools use clickhouse-connect directly; MCP wiring deferred.",
     }

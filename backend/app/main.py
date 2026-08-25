@@ -10,7 +10,8 @@ from app.api.agent import router as agent_router
 from app.api.events import router as events_router
 from app.api.incidents import router as incidents_router
 from app.api.simulate import router as simulate_router
-from app.integrations import clickhouse_client, gemini
+from app.integrations import clickhouse_client
+from app.agents import runner as adk_runner
 from app.services import event_service
 
 app = FastAPI(
@@ -62,9 +63,18 @@ def health_clickhouse():
         )
 
 
+@app.get("/health/adk")
+def health_adk():
+    result = adk_runner.health()
+    if not result.get("ok"):
+        return JSONResponse(status_code=503, content=result)
+    return result
+
+
 @app.get("/health/gemini")
-def health_gemini():
-    return {"ok": True, "available": gemini.gemini_available()}
+def health_gemini_compat():
+    """Deprecated alias — use /health/adk."""
+    return health_adk()
 
 
 @app.get("/api/production/health")

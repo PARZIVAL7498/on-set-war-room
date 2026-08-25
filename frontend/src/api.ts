@@ -127,4 +127,6 @@ export const runScenario = (name: string) =>
   )
 
 export const fetchGeminiStatus = () =>
-  api<{ available: boolean }>('/api/agent/gemini-status')
+  api<{ available: boolean; live_llm?: boolean; mode?: string }>(
+    '/api/agent/adk-status',
+  )

@@ -1,31 +1,36 @@
-"""Pivot agent — deterministic candidates + optional Gemini narration."""
+"""Pivot / narrator — ADK LlmAgent + deterministic candidates."""
 
 from __future__ import annotations
 
-from app.integrations import gemini
+from app.agents.adk_app import narrator_agent as adk_narrator_agent
 from app.schemas.incidents import InvestigationFindings, PivotRecommendation, RiskResult
 from app.services import pivot_engine
+
+agent = adk_narrator_agent
 
 
 def find_pivots(findings: InvestigationFindings) -> list[PivotRecommendation]:
     return pivot_engine.find_candidates(findings)
 
 
-def narrate(
+def canned_narrative(
     findings: InvestigationFindings,
     risk: RiskResult,
     pivots: list[PivotRecommendation],
-) -> tuple[str, bool, PivotRecommendation | None]:
-    """Pick top deterministic pivot; narrate with Gemini if available."""
+) -> str:
     top = pivots[0] if pivots else None
-    narrative, used = gemini.narrate_pivot(
-        resource_id=findings.resource_id,
-        risk_level=risk.level.value,
-        risk_score=risk.score,
-        affected_scenes=[s.scene_number for s in findings.affected_scenes],
-        pivot_scene=top.scene_number if top else None,
-        pivot_title=top.title if top else None,
-        factors=risk.factors,
-        reasons=top.reasons if top else [],
+    scenes = ", ".join(f"Scene {s.scene_number}" for s in findings.affected_scenes) or "none"
+    pivot_line = (
+        f"Recommend moving Scene {top.scene_number}"
+        + (f" ({top.title})" if top else "")
+        + " ahead to keep the day productive."
+        if top
+        else "No valid pivot candidate passed hard constraints."
     )
-    return narrative, used, top
+    return (
+        f"{findings.resource_id} is unavailable. ADK investigation found impact on {scenes}. "
+        f"Risk assessed at {risk.level.value} (score {risk.score}/100). "
+        f"Drivers: {'; '.join(risk.factors) or 'n/a'}. "
+        f"{pivot_line} "
+        f"Pivot rationale: {'; '.join(top.reasons) if top else 'n/a'}."
+    )

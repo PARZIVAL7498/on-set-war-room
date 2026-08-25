@@ -1,1 +1,5 @@
-"""Thin agent package — deterministic engines + optional Gemini narration."""
+"""Agent package — Google ADK SequentialAgent pipeline + FunctionTools."""
+
+from app.agents import orchestrator
+
+__all__ = ["orchestrator"]

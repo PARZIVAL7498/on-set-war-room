@@ -9,10 +9,8 @@ dependencies = [
     "clickhouse-connect>=0.8.0",
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
+    "google-adk>=1.0.0",
 ]
-
-[project.optional-dependencies]
-gemini = ["google-genai>=1.0.0"]
 
 [build-system]
 requires = ["setuptools>=68"]

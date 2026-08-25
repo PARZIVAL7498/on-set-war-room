@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, status
 
 from app.agents import orchestrator
+from app.agents.orchestrator import AdkUnavailableError
 from app.schemas.events import EquipmentEventIn, ResourceEventIn
 from app.schemas.incidents import Incident
 from app.services import event_service
@@ -89,7 +90,13 @@ def run_scenario(scenario_name: str, investigate: bool = True):
 
     incident: Incident | None = None
     if investigate:
-        incident = orchestrator.run_for_ingested_event(event_id, payload)
+        try:
+            incident = orchestrator.run_for_ingested_event(event_id, payload)
+        except AdkUnavailableError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=str(exc),
+            ) from exc
 
     return {
         "scenario": path.stem,

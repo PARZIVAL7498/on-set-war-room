@@ -66,14 +66,24 @@ def main() -> int:
     print(f"affected_scenes={affected}")
     print(f"recommended_pivot={pivot}")
     print(f"timeline_steps={len(detail.get('timeline') or [])}")
-    print(f"gemini_used={detail.get('gemini_used')}")
+    print(f"adk_used={detail.get('gemini_used')}")
 
-    ok = risk == "HIGH" and affected == [43, 48] and pivot == 47
+    timeline = detail.get("timeline") or []
+    has_adk = any(
+        (t.get("tool") == "google.adk.Runner")
+        or str(t.get("agent", "")).endswith("_agent")
+        or str(t.get("step", "")).startswith("adk")
+        for t in timeline
+    )
+
+    ok = risk == "HIGH" and affected == [43, 48] and pivot == 47 and has_adk
     if not ok:
         print("ASSERTION FAILED", file=sys.stderr)
+        if not has_adk:
+            print("Missing ADK timeline steps", file=sys.stderr)
         return 1
 
-    print("MVP verification passed.")
+    print("MVP verification passed (ADK pipeline).")
     return 0
 
 

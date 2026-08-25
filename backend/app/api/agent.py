@@ -5,7 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, status
 
 from app.agents import orchestrator
-from app.integrations import clickhouse_client, gemini
+from app.agents.orchestrator import AdkUnavailableError
+from app.integrations import clickhouse_client
 from app.schemas.incidents import InvestigateRequest, InvestigateResponse
 from app.services import event_service
 
@@ -16,6 +17,10 @@ router = APIRouter(prefix="/api/agent", tags=["agent"])
 def investigate(payload: InvestigateRequest) -> InvestigateResponse:
     try:
         incident = orchestrator.run_for_ingested_event(payload.event_id)
+    except AdkUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
     except event_service.EventIngestError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except event_service.IncidentStoreError as exc:
@@ -52,5 +57,9 @@ def agent_actions(incident_id: str):
 
 
 @router.get("/gemini-status")
-def gemini_status():
-    return {"available": gemini.gemini_available()}
+@router.get("/adk-status")
+def adk_status():
+    from app.agents import runner as adk_runner
+
+    health = adk_runner.health()
+    return {"available": bool(health.get("ok")), **health}
