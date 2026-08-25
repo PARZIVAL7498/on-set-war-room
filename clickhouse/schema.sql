@@ -1,0 +1,1 @@
+-- Moved to clickhouse/schema/001_initial_schema.sql (ClickHouse Cloud source of truth).

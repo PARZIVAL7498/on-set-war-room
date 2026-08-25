@@ -1,0 +1,1 @@
+-- Moved to clickhouse/seed/001_midnight_protocol.sql (ClickHouse Cloud source of truth).
