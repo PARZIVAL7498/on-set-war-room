@@ -227,6 +227,11 @@ def run_pipeline(
             timeline=timeline,
             created_at=_now().replace(tzinfo=None),
             gemini_used=used_adk,
+            title=event_service.format_incident_title(
+                resource_id=findings.resource_id,
+                resource_status=findings.status,
+                affected_scenes=affected,
+            ),
         )
     incident.gemini_used = used_adk
     return incident

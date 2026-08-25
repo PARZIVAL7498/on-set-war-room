@@ -28,6 +28,7 @@ When **CAMERA-02** goes **DOWN** mid-shoot, the system:
 - [Data model (ClickHouse)](#data-model-clickhouse)
 - [Agent pipeline (Google ADK)](#agent-pipeline-google-adk)
 - [Prerequisites](#prerequisites)
+- [Deploy (Render + Vercel)](#deploy-render--vercel)
 - [Quick start](#quick-start)
 - [Demo script](#demo-script)
 - [API reference](#api-reference)
@@ -171,6 +172,68 @@ Entry points:
 - Node.js **20+**
 - **ClickHouse Cloud** account (HTTPS; Docker not required)
 - **Gemini API key** for live ADK LLM turns (optional but recommended)
+
+---
+
+## Deploy (Render + Vercel)
+
+Hackathon-friendly split: **API on Render**, **UI on Vercel**. Both talk to the same **ClickHouse Cloud** database.
+
+### A. Backend — Render
+
+1. Push this repo to GitHub (public).
+2. [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint** → select the repo  
+   (or **Web Service** with root directory `backend`).
+3. Settings from [`render.yaml`](render.yaml):
+   - **Build:** `pip install -e .`
+   - **Start:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Health check:** `/health`
+4. Set env vars (Dashboard → Environment):
+
+| Key | Value |
+|-----|--------|
+| `CLICKHOUSE_HOST` | your ClickHouse Cloud host |
+| `CLICKHOUSE_PORT` | `8443` |
+| `CLICKHOUSE_USERNAME` | `default` |
+| `CLICKHOUSE_PASSWORD` | secret |
+| `CLICKHOUSE_DATABASE` | `on_set_war_room` |
+| `CLICKHOUSE_SECURE` | `true` |
+| `GOOGLE_API_KEY` | Gemini key |
+| `GEMINI_MODEL` | `gemini-3.6-flash` |
+| `CORS_ORIGINS` | your Vercel URL, e.g. `https://on-set-war-room.vercel.app` |
+
+5. Deploy and copy the service URL, e.g. `https://on-set-war-room-api.onrender.com`.
+6. Smoke test:
+
+```powershell
+curl.exe https://YOUR-API.onrender.com/health
+curl.exe https://YOUR-API.onrender.com/health/clickhouse
+curl.exe https://YOUR-API.onrender.com/health/adk
+```
+
+> Free Render services sleep when idle — first request after idle can take ~30–60s.
+
+### B. Frontend — Vercel
+
+1. [Vercel](https://vercel.com) → **Add New Project** → import the same GitHub repo.
+2. Configure:
+   - **Root Directory:** `frontend`
+   - **Framework:** Vite (auto)
+   - **Build:** `npm run build`
+   - **Output:** `dist`
+3. Environment variable (Production + Preview):
+
+| Key | Value |
+|-----|--------|
+| `VITE_API_BASE` | `https://YOUR-API.onrender.com` (no trailing slash) |
+
+4. Deploy. Open the Vercel URL → War Room → run **camera_failure**.
+
+[`frontend/vercel.json`](frontend/vercel.json) rewrites SPA routes to `index.html`.
+
+### C. Local still works
+
+Leave `VITE_API_BASE` unset locally; Vite proxies `/api` and `/health` to `127.0.0.1:8000`.
 
 ---
 
@@ -328,7 +391,7 @@ Related scripts:
 ## Roadmap gaps
 
 - ClickHouse **MCP** bridge is stubbed (`integrations/mcp_client.py`); tools use `clickhouse-connect` directly today
-- Hosted deploy (Cloud Run + public URL) and LICENSE file for hackathon submission
+- Prefer **Render + Vercel** for the public hackathon URL (see Deploy section); add a root `LICENSE` before submission
 - Stronger Google Cloud / Vertex Agent Platform wiring beyond AI Studio-style API keys
 
 Detailed phased plan: [docs/implementation-plan.md](docs/implementation-plan.md).

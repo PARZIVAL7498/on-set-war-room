@@ -10,6 +10,9 @@ export interface IncidentSummary {
   affected_scenes: number[]
   recommended_scene: number | null
   created_at: string
+  title?: string
+  resource_id?: string | null
+  resource_status?: string | null
 }
 
 export interface TimelineStep {
@@ -67,6 +70,29 @@ export interface Incident {
   timeline: TimelineStep[]
   created_at: string
   gemini_used: boolean
+  title?: string
+}
+
+/** Display name for list/detail — never show raw incident_id as the headline. */
+export function incidentDisplayName(
+  inc: Pick<
+    IncidentSummary,
+    'title' | 'incident_id' | 'affected_scenes' | 'resource_id' | 'resource_status'
+  > & {
+    evidence?: Incident['evidence']
+  },
+): string {
+  if (inc.title?.trim()) return inc.title.trim()
+  const rid = inc.evidence?.resource_id || inc.resource_id
+  const status = inc.evidence?.status || inc.resource_status
+  if (rid) {
+    const verb = (status || 'ISSUE').toLowerCase()
+    const scenes = inc.affected_scenes?.length
+      ? ` — Scenes ${inc.affected_scenes.join(', ')}`
+      : ''
+    return `${rid} ${verb}${scenes}`
+  }
+  return 'Untitled incident'
 }
 
 export interface ProductionHealth {
@@ -96,7 +122,9 @@ export interface ScenarioInfo {
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
+  const base = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? ''
+  const url = path.startsWith('http') ? path : `${base}${path}`
+  const res = await fetch(url, {
     ...init,
     headers: {
       'Content-Type': 'application/json',

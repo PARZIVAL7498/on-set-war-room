@@ -1,0 +1,16 @@
+.env
+.git
+.venv
+venv
+**/__pycache__
+**/*.pyc
+frontend/node_modules
+frontend/dist
+**/.DS_Store
+*.mp4
+*.png
+!frontend/public/**
+design-system
+docs
+agent-transcripts
+.cursor

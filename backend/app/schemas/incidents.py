@@ -86,6 +86,9 @@ class IncidentSummary(BaseModel):
     affected_scenes: list[int]
     recommended_scene: int | None = None
     created_at: datetime
+    title: str = ""
+    resource_id: str | None = None
+    resource_status: str | None = None
 
 
 class Incident(BaseModel):
@@ -103,6 +106,7 @@ class Incident(BaseModel):
     timeline: list[AgentTimelineStep] = Field(default_factory=list)
     created_at: datetime
     gemini_used: bool = False
+    title: str = ""
 
 
 class InvestigateRequest(BaseModel):

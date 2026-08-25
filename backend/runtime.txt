@@ -1,0 +1,2 @@
+# Python version for Render native runtime
+python-3.12.8

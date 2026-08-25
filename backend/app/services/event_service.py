@@ -364,6 +364,45 @@ def store_incident(
     return incident_id
 
 
+def format_incident_title(
+    *,
+    resource_id: str | None,
+    resource_status: str | None,
+    affected_scenes: list[int] | None = None,
+) -> str:
+    """Human-readable incident name for UI (not the raw incident_id)."""
+    rid = (resource_id or "").strip() or "Unknown resource"
+    status = (resource_status or "").strip().upper() or "ISSUE"
+    verb = {
+        "DOWN": "down",
+        "DEGRADED": "degraded",
+        "UP": "restored",
+    }.get(status, status.lower())
+    scenes = affected_scenes or []
+    if scenes:
+        scene_bit = ", ".join(str(n) for n in scenes)
+        return f"{rid} {verb} — Scenes {scene_bit}"
+    return f"{rid} {verb}"
+
+
+def _title_from_evidence_json(evidence_raw: Any, affected: list[int]) -> tuple[str, str | None, str | None]:
+    resource_id = None
+    resource_status = None
+    try:
+        data = json.loads(evidence_raw) if isinstance(evidence_raw, str) else evidence_raw
+        if isinstance(data, dict):
+            resource_id = data.get("resource_id")
+            resource_status = data.get("status")
+    except Exception:  # noqa: BLE001
+        pass
+    title = format_incident_title(
+        resource_id=resource_id,
+        resource_status=resource_status,
+        affected_scenes=affected,
+    )
+    return title, resource_id, resource_status
+
+
 def _parse_incident_row(row: dict[str, Any]) -> Incident:
     factors_raw = row.get("risk_factors") or "[]"
     pivot_reasons_raw = row.get("pivot_reasons") or "[]"
@@ -434,6 +473,15 @@ def _parse_incident_row(row: dict[str, Any]) -> Incident:
 
     timeline = [AgentTimelineStep.model_validate(t) for t in timeline_data]
 
+    affected = list(row.get("affected_scenes") or [])
+    if evidence and not affected:
+        affected = [s.scene_number for s in evidence.affected_scenes]
+    incident_title = format_incident_title(
+        resource_id=evidence.resource_id if evidence else None,
+        resource_status=evidence.status if evidence else None,
+        affected_scenes=affected,
+    )
+
     return Incident(
         incident_id=row["incident_id"],
         production_id=row["production_id"],
@@ -442,7 +490,7 @@ def _parse_incident_row(row: dict[str, Any]) -> Incident:
         risk_level=RiskLevel(row["risk_level"]),
         risk_score=int(row["risk_score"]),
         risk_factors=list(factors),
-        affected_scenes=list(row.get("affected_scenes") or []),
+        affected_scenes=affected,
         evidence=evidence,
         recommended_pivot=recommended,
         narrative=row.get("narrative") or "",
@@ -454,6 +502,7 @@ def _parse_incident_row(row: dict[str, Any]) -> Incident:
             or "ADK" in (t.summary or "")
             for t in timeline
         ),
+        title=incident_title,
     )
 
 
@@ -479,7 +528,8 @@ def list_incidents(
             risk_score,
             affected_scenes,
             recommended_scene,
-            created_at
+            created_at,
+            evidence_json
         FROM on_set_war_room.incidents
         {where}
         ORDER BY created_at DESC
@@ -490,6 +540,8 @@ def list_incidents(
     out: list[IncidentSummary] = []
     for row in result.result_rows:
         rec = int(row[7] or 0)
+        affected = list(row[6] or [])
+        title, resource_id, resource_status = _title_from_evidence_json(row[9], affected)
         out.append(
             IncidentSummary(
                 incident_id=row[0],
@@ -498,9 +550,12 @@ def list_incidents(
                 status=row[3],
                 risk_level=RiskLevel(row[4]),
                 risk_score=int(row[5]),
-                affected_scenes=list(row[6] or []),
+                affected_scenes=affected,
                 recommended_scene=rec or None,
                 created_at=row[8],
+                title=title,
+                resource_id=resource_id,
+                resource_status=resource_status,
             )
         )
     return out

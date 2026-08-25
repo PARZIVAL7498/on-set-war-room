@@ -23,6 +23,7 @@ import {
   fetchIncidents,
   fetchProductionHealth,
   fetchScenarios,
+  incidentDisplayName,
   runScenario,
   type Incident,
   type IncidentSummary,
@@ -79,7 +80,7 @@ export default function WarRoomPage() {
         fetchProductionHealth(),
         fetchIncidents(),
         fetchScenarios(),
-        fetchGeminiStatus().catch(() => ({ available: false })),
+        fetchGeminiStatus().catch(() => ({ available: false as boolean, live_llm: false, mode: '' })),
       ])
       setHealth(h)
       setIncidents(list)
@@ -277,9 +278,11 @@ export default function WarRoomPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-display text-sm font-medium">{inc.incident_id}</span>
+                        <span className="font-display text-sm font-medium leading-snug">
+                          {incidentDisplayName(inc)}
+                        </span>
                         <span
-                          className={`rounded border px-2 py-0.5 font-display text-[10px] font-semibold uppercase ${RISK_STYLES[inc.risk_level]}`}
+                          className={`shrink-0 rounded border px-2 py-0.5 font-display text-[10px] font-semibold uppercase ${RISK_STYLES[inc.risk_level]}`}
                         >
                           {inc.risk_level}
                         </span>
@@ -341,9 +344,11 @@ export default function WarRoomPage() {
                     <p className="font-display text-xs uppercase tracking-wider text-muted-foreground">
                       Active incident
                     </p>
-                    <h2 className="mt-1 font-display text-xl font-semibold">{active.incident_id}</h2>
+                    <h2 className="mt-1 font-display text-xl font-semibold">
+                      {incidentDisplayName(active)}
+                    </h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Event {active.event_id} · {formatTime(active.created_at)}
+                      {formatTime(active.created_at)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
