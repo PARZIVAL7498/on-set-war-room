@@ -2,6 +2,7 @@
 # Docs: https://render.com/docs/blueprint-spec
 
 services:
+  # Recommended: Python native runtime (fastest free-tier deploy).
   - type: web
     name: on-set-war-room-api
     runtime: python
@@ -11,6 +12,8 @@ services:
     buildCommand: pip install -e .
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+    # If you choose Docker in the Render dashboard instead, use rootDir: backend
+    # so Render picks up backend/Dockerfile (not the repo-root multi-stage Dockerfile).
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.8"
