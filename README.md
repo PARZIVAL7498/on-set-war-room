@@ -1,15 +1,14 @@
 # On-Set War Room
 
-**Agentic production incident command center** for the Google Cloud × ClickHouse (Agentic Cinema) partner track.
+Agentic production incident command center for film sets. When **CAMERA-02** goes **DOWN** mid-shoot, the system ingests the event into **ClickHouse Cloud**, runs a **Google ADK** four-agent pipeline, scores risk with deterministic engines, ranks a schedule pivot, and surfaces everything on a cinematic ops dashboard.
 
-When **CAMERA-02** goes **DOWN** mid-shoot, the system:
+Built for the **Google Cloud × ClickHouse (Agentic Cinema)** partner track.
 
-1. Ingests the event into **ClickHouse Cloud**
-2. Runs a **Google ADK** multi-agent pipeline (`SequentialAgent`)
-3. Scores risk and ranks a schedule pivot with **deterministic engines**
-4. Surfaces the incident on a cinematic ops dashboard
+**Repository:** [github.com/PARZIVAL7498/on-set-war-room](https://github.com/PARZIVAL7498/on-set-war-room)
 
-**Core demo truth (Midnight Protocol seed):**
+---
+
+## Demo outcome (Midnight Protocol seed)
 
 | Signal | Expected value |
 |--------|----------------|
@@ -18,277 +17,122 @@ When **CAMERA-02** goes **DOWN** mid-shoot, the system:
 | Risk | **HIGH** (~80) |
 | Recommended pivot | **Scene 47** |
 
----
-
-## Table of contents
-
-- [Why this exists](#why-this-exists)
-- [Architecture](#architecture)
-- [Repository layout](#repository-layout)
-- [Data model (ClickHouse)](#data-model-clickhouse)
-- [Agent pipeline (Google ADK)](#agent-pipeline-google-adk)
-- [Prerequisites](#prerequisites)
-- [Deploy (Render + Vercel)](#deploy-render--vercel)
-- [Quick start](#quick-start)
-- [Demo script](#demo-script)
-- [API reference](#api-reference)
-- [Verification](#verification)
-- [Design / frontend](#design--frontend)
-- [Security notes](#security-notes)
-- [Roadmap gaps](#roadmap-gaps)
+Run the **camera_failure** scenario in the War Room UI or via API to verify.
 
 ---
 
-## Why this exists
-
-Film sets generate operational chaos: kit fails, cast slips, weather shifts. Producers need **seconds**, not spreadsheet archaeology.
-
-On-Set War Room treats production telemetry as an investigative workflow:
-
-- **ClickHouse** is the system of record (events, scenes, requirements, incidents, agent traces)
-- **Google ADK + Gemini** orchestrates *which evidence to gather* and *how to narrate*
-- **Deterministic Python engines** own scores and pivot ranking so the agent cannot invent scenes or override risk math
-
----
-
-## Architecture
+## How it works
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│  React / Vite UI                                                │
-│  /  landing (cinematic)     /war-room  ops console              │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │  /api  /health  (Vite proxy)
-┌───────────────────────────────▼─────────────────────────────────┐
-│  FastAPI                                                        │
-│  events · simulate · incidents · agent · production health      │
-│                         │                                       │
-│              orchestrator.run_pipeline()                        │
-│                         │                                       │
-│              Google ADK Runner + SequentialAgent                │
-│              Monitor → Investigator → Impact → Narrator         │
-│                         │                                       │
-│              FunctionTools ──► ClickHouse queries               │
-│                            ──► risk_engine / pivot_engine       │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │  clickhouse-connect (HTTPS)
-┌───────────────────────────────▼─────────────────────────────────┐
-│  ClickHouse Cloud                                               │
-│  productions · scenes · scene_requirements                      │
-│  resource_status_events · incidents · agent_actions             │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────┐
+│  React / Vite UI        │
+│  /        landing page  │
+│  /war-room  ops console │
+└───────────┬─────────────┘
+            │  /api  /health
+┌───────────▼─────────────┐
+│  FastAPI backend        │
+│  Google ADK pipeline    │
+└───────────┬─────────────┘
+            │
+┌───────────▼─────────────┐
+│  ClickHouse Cloud       │
+│  events · scenes ·      │
+│  incidents · traces     │
+└─────────────────────────┘
 ```
 
-```mermaid
-flowchart LR
-  UI[WarRoom_UI] --> API[FastAPI]
-  Sim[Simulator] --> API
-  API --> Orch[Orchestrator]
-  Orch --> ADK[ADK_SequentialAgent]
-  ADK --> Tools[FunctionTools]
-  Tools --> CH[(ClickHouse_Cloud)]
-  Tools --> Risk[risk_engine]
-  Tools --> Pivot[pivot_engine]
-  Orch --> Store[incidents_agent_actions]
-  Store --> CH
-```
+### Event → incident flow
 
-### Runtime modes
+1. A resource status event is ingested (`CAMERA-02 DOWN`).
+2. **Monitor agent** decides whether to investigate.
+3. **Investigator agent** queries ClickHouse for affected scenes and requirements.
+4. **Impact agent** calls the deterministic `risk_engine` (no invented scores).
+5. **Narrator agent** calls `pivot_engine` and writes a grounded recommendation.
+6. The orchestrator re-runs the same tools in Python so facts stay stable even if the LLM narrates differently.
+7. An incident is stored in ClickHouse and shown in the War Room UI.
+
+### The four agents
+
+| # | Agent | Role |
+|---|--------|------|
+| 1 | `monitor_agent` | Gatekeeper — investigate or skip |
+| 2 | `investigator_agent` | Gather ClickHouse evidence |
+| 3 | `impact_agent` | Score risk via `risk_engine` |
+| 4 | `narrator_agent` | Rank pivot via `pivot_engine` + narrate |
+
+### ADK runtime modes
 
 | Mode | When | Behavior |
 |------|------|----------|
-| `live` | Valid `GOOGLE_API_KEY` / `GEMINI_API_KEY` | Real ADK `Runner` + Gemini LLM turns + tools |
-| `tools_choreography` | No key, or live LLM error | Same ADK agent/tool graph; tools execute in order without LLM |
+| `live` | `GOOGLE_API_KEY` set | Real Gemini LLM turns + tool calls |
+| `tools_choreography` | No key, or LLM error | Same tool sequence without LLM |
 
-`/health/adk` reports `mode`, `live_llm`, and `api_key_present`.
-
-**Guardrail:** After ADK runs, the orchestrator **re-materializes** findings / risk / pivot from the same FunctionTools so demo assertions stay stable (43/48 → HIGH → 47). Narration comes from the ADK narrator when available.
+Check `/health/adk` for current mode.
 
 ---
 
-## Repository layout
+## Tech stack
 
-```text
-on-set-war-room/
-├── backend/                 # FastAPI + Google ADK
-│   └── app/
-│       ├── agents/          # SequentialAgent, Runner, FunctionTools, orchestrator
-│       ├── api/             # HTTP routes
-│       ├── integrations/    # ClickHouse client, Gemini/ADK health helpers
-│       ├── schemas/         # Pydantic models
-│       └── services/        # event_service, risk_engine, pivot_engine
-├── frontend/                # React + Vite + Tailwind landing + war room
-├── clickhouse/
-│   ├── schema/              # DDL
-│   ├── seed/                # Midnight Protocol demo data
-│   └── sample_queries.sql
-├── simulator/               # Scenario JSON + event_generator.py
-├── scripts/                 # apply_clickhouse, verify_mvp, verify_ingestion
-├── docs/implementation-plan.md
-└── .env.example
-```
-
----
-
-## Data model (ClickHouse)
-
-Database: `on_set_war_room` (configurable via `CLICKHOUSE_DATABASE`).
-
-| Table | Role |
-|-------|------|
-| `productions` | Production metadata (e.g. Midnight Protocol) |
-| `scenes` | Call sheet windows, location, status |
-| `scene_requirements` | Scene ↔ equipment/crew/location dependencies |
-| `resource_status_events` | Live ingest stream (CAMERA-02 DOWN, etc.) |
-| `incidents` | Persisted investigation outcomes + narrative + timeline JSON |
-| `agent_actions` | Per-step / tool observability rows |
-
-Seed narrative is intentional, not random: **CAMERA-02** is required by scenes **43** and **48**; scene **47** is a valid alternative that does not need CAMERA-02.
-
----
-
-## Agent pipeline (Google ADK)
-
-Root agent: `war_room_pipeline` (`SequentialAgent`) in `backend/app/agents/adk_app.py`.
-
-| Order | Agent | Tools | Responsibility |
-|------:|-------|-------|----------------|
-| 1 | `monitor_agent` | `evaluate_event_risk` | Decide investigate vs skip |
-| 2 | `investigator_agent` | `get_scenes_requiring_resource`, `get_scene_requirements`, `investigate_resource_event` | Gather ClickHouse evidence |
-| 3 | `impact_agent` | `score_risk` | Call deterministic `risk_engine` |
-| 4 | `narrator_agent` | `find_pivot_candidates` | Call `pivot_engine` + narrate grounded recommendation |
-
-Entry points:
-
-- `backend/app/agents/runner.py` — ADK `Runner` / tools choreography
-- `backend/app/agents/orchestrator.py` — FastAPI bridge, timeline, incident store
-- `backend/app/agents/tools.py` — JSON-serializable FunctionTools
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19, Vite, Tailwind CSS, Framer Motion, GSAP |
+| Backend | FastAPI, Python 3.12, Google ADK, Gemini |
+| Database | ClickHouse Cloud |
 
 ---
 
 ## Prerequisites
 
-- Python **3.10+**
-- Node.js **20+**
-- **ClickHouse Cloud** account (HTTPS; Docker not required)
-- **Gemini API key** for live ADK LLM turns (optional but recommended)
+- **Python 3.10+** (3.12 recommended)
+- **Node.js 20+**
+- **ClickHouse Cloud** account ([clickhouse.cloud](https://clickhouse.cloud))
+- **Gemini API key** ([Google AI Studio](https://aistudio.google.com/apikey)) — optional but recommended for live LLM turns
 
 ---
 
-## Deploy (Render + Vercel)
-
-Hackathon-friendly split: **API on Render**, **UI on Vercel**. Both talk to the same **ClickHouse Cloud** database.
-
-### A. Backend — Render
-
-1. Push this repo to GitHub (public).
-2. [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint** → select the repo  
-   (or **Web Service** with root directory `backend`).
-3. Settings from [`render.yaml`](render.yaml):
-   - **Build:** `pip install -e .`
-   - **Start:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-   - **Health check:** `/health`
-4. Set env vars (Dashboard → Environment):
-
-| Key | Value |
-|-----|--------|
-| `CLICKHOUSE_HOST` | your ClickHouse Cloud host |
-| `CLICKHOUSE_PORT` | `8443` |
-| `CLICKHOUSE_USERNAME` | `default` |
-| `CLICKHOUSE_PASSWORD` | secret |
-| `CLICKHOUSE_DATABASE` | `on_set_war_room` |
-| `CLICKHOUSE_SECURE` | `true` |
-| `GOOGLE_API_KEY` | Gemini key |
-| `GEMINI_MODEL` | `gemini-3.6-flash` |
-| `CORS_ORIGINS` | your Vercel URL, e.g. `https://on-set-war-room.vercel.app` |
-
-5. Deploy and copy the service URL, e.g. `https://on-set-war-room-api.onrender.com`.
-6. Smoke test:
-
-```powershell
-curl.exe https://YOUR-API.onrender.com/health
-curl.exe https://YOUR-API.onrender.com/health/clickhouse
-curl.exe https://YOUR-API.onrender.com/health/adk
-```
-
-> Free Render services sleep when idle — first request after idle can take ~30–60s.
-
-### B. Frontend — Vercel
-
-1. [Vercel](https://vercel.com) → **Add New Project** → import the same GitHub repo.
-2. Configure:
-   - **Root Directory:** `frontend`
-   - **Framework:** Vite (auto)
-   - **Build:** `npm run build`
-   - **Output:** `dist`
-3. Environment variable (Production + Preview):
-
-| Key | Value |
-|-----|--------|
-| `VITE_API_BASE` | `https://YOUR-API.onrender.com` (no trailing slash) |
-
-4. Deploy. Open the Vercel URL → War Room → run **camera_failure**.
-
-[`frontend/vercel.json`](frontend/vercel.json) rewrites SPA routes to `index.html`.
-
-### C. Local still works
-
-Leave `VITE_API_BASE` unset locally; Vite proxies `/api` and `/health` to `127.0.0.1:8000`.
-
----
-
-## Quick start
+## Local development
 
 ### 1. Environment
 
-```powershell
-cd d:\on-war-room\on-set-war-room
-copy .env.example .env
+```bash
+cp .env.example .env
 ```
 
 Fill in `.env` (never commit it):
 
 ```env
-CLICKHOUSE_HOST=your-service.region.provider.clickhouse.cloud
+CLICKHOUSE_HOST=your-service.region.clickhouse.cloud
 CLICKHOUSE_PORT=8443
 CLICKHOUSE_USERNAME=default
-CLICKHOUSE_PASSWORD=...
+CLICKHOUSE_PASSWORD=your-password
 CLICKHOUSE_DATABASE=on_set_war_room
 CLICKHOUSE_SECURE=true
 
-GOOGLE_API_KEY=...
+GOOGLE_API_KEY=your-gemini-key
 GEMINI_MODEL=gemini-3.6-flash
 ```
 
-### 2. Backend install + schema
+### 2. Install dependencies and apply ClickHouse
 
-```powershell
-python -m pip install -e backend
-python scripts/apply_clickhouse.py --schema
-python scripts/apply_clickhouse.py --seed
+```bash
+pip install -e backend
+python scripts/apply_clickhouse.py --all
 ```
 
-### 3. Run API
+### 3. Run backend
 
-```powershell
+```bash
 cd backend
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Health:
+### 4. Run frontend
 
-```powershell
-curl.exe http://127.0.0.1:8000/health
-curl.exe http://127.0.0.1:8000/health/clickhouse
-curl.exe http://127.0.0.1:8000/health/adk
-```
-
-### 4. Run UI
-
-```powershell
+```bash
 cd frontend
 npm install
-npx vite --host 127.0.0.1 --port 5173
+npm run dev
 ```
 
 | Surface | URL |
@@ -296,108 +140,118 @@ npx vite --host 127.0.0.1 --port 5173
 | Landing | http://127.0.0.1:5173/ |
 | War Room | http://127.0.0.1:5173/war-room |
 | API | http://127.0.0.1:8000 |
+| API docs | http://127.0.0.1:8000/docs |
 
-Vite proxies `/api` and `/health` to the backend.
+Vite proxies `/api` and `/health` to the backend during local development.
 
 ---
 
-## Demo script
+## Demo scenarios
 
-With the API up:
+### From the UI
 
-```powershell
-# Option A — simulator CLI
+Open `/war-room` and click a scenario button (**camera_failure**, **actor_delay**, **weather_issue**).
+
+### From the CLI
+
+```bash
+python simulator/event_generator.py --list
 python simulator/event_generator.py --scenario camera_failure
+```
 
-# Option B — HTTP
-curl.exe -X POST http://127.0.0.1:8000/api/simulate/camera_failure
+### From the API
 
-# Inspect
-curl.exe http://127.0.0.1:8000/api/incidents
+```bash
+curl -X POST http://127.0.0.1:8000/api/simulate/camera_failure
+curl http://127.0.0.1:8000/api/incidents
+```
+
+### Verify MVP assertions
+
+```bash
 python scripts/verify_mvp.py
 ```
 
-Other scenarios:
-
-```powershell
-python simulator/event_generator.py --list
-python simulator/event_generator.py --scenario actor_delay
-python simulator/event_generator.py --scenario weather_issue
-```
-
-In the War Room UI: open **Enter console** / `/war-room`, run **camera_failure**, confirm HIGH / scenes 43 & 48 / pivot 47 and the agent timeline.
+Checks: `HIGH` risk, scenes `[43, 48]`, pivot scene `47`, non-empty agent timeline.
 
 ---
 
 ## API reference
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `POST` | `/api/events` | Ingest resource event; auto-investigate DOWN/DEGRADED |
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Liveness |
+| `GET` | `/health/clickhouse` | ClickHouse connectivity |
+| `GET` | `/health/adk` | ADK status and runtime mode |
+| `POST` | `/api/events` | Ingest event; auto-investigate DOWN/DEGRADED |
 | `POST` | `/api/events/equipment` | Equipment-shaped ingest alias |
 | `GET` | `/api/incidents` | List incidents |
-| `GET` | `/api/incidents/{id}` | Full detail: evidence, pivot, narrative, timeline |
-| `POST` | `/api/agent/investigate` | Re-run ADK pipeline for an `event_id` |
-| `GET` | `/api/agent/actions/{id}` | Tool/action rows from ClickHouse |
-| `GET` | `/api/agent/adk-status` | ADK health (also `/api/agent/gemini-status`) |
-| `GET` | `/api/simulate/scenarios` | List canned scenarios |
-| `POST` | `/api/simulate/{name}` | Ingest + investigate scenario |
+| `GET` | `/api/incidents/{id}` | Full incident detail |
+| `POST` | `/api/agent/investigate` | Re-run pipeline for an event |
+| `GET` | `/api/agent/actions/{id}` | Agent action rows |
+| `GET` | `/api/agent/adk-status` | ADK health |
+| `GET` | `/api/simulate/scenarios` | List demo scenarios |
+| `POST` | `/api/simulate/{name}` | Run scenario end-to-end |
 | `GET` | `/api/production/health` | Dashboard aggregate |
-| `GET` | `/health` | Liveness |
-| `GET` | `/health/clickhouse` | ClickHouse ping + latency |
-| `GET` | `/health/adk` | ADK import + key + mode |
+
+Interactive docs: `/docs` when the backend is running.
 
 ---
 
-## Verification
+## Repository layout
 
-```powershell
-python scripts/verify_mvp.py
+```text
+on-set-war-room/
+├── backend/
+│   ├── app/
+│   │   ├── agents/          # ADK SequentialAgent, orchestrator, tools
+│   │   ├── api/             # FastAPI routes
+│   │   ├── integrations/    # ClickHouse client
+│   │   ├── schemas/         # Pydantic models
+│   │   └── services/        # event_service, risk_engine, pivot_engine
+│   └── pyproject.toml
+├── frontend/
+│   └── src/                 # React pages and components
+├── clickhouse/
+│   ├── schema/              # DDL (apply with --schema)
+│   └── seed/                # Demo data (apply with --seed)
+├── simulator/
+│   ├── scenarios/           # camera_failure, actor_delay, etc.
+│   └── event_generator.py
+├── scripts/
+│   ├── apply_clickhouse.py
+│   ├── verify_mvp.py
+│   └── verify_clickhouse.py
+└── .env.example
 ```
 
-Asserts for `camera_failure`:
+---
 
-- `risk_level == HIGH`
-- `affected_scenes == [43, 48]`
-- `recommended_pivot.scene_number == 47`
-- Timeline includes ADK agent / tool steps
+## ClickHouse data model
 
-Related scripts:
+Database: `on_set_war_room`
 
-- `scripts/verify_ingestion.py` — event landing in ClickHouse
-- `scripts/verify_clickhouse.py` — connectivity + seed sanity
-- `scripts/apply_clickhouse.py` — apply schema/seed
+| Table | Purpose |
+|-------|---------|
+| `productions` | Production metadata |
+| `scenes` | Call sheet windows, locations, status |
+| `scene_requirements` | Scene ↔ equipment/crew dependencies |
+| `resource_status_events` | Live event ingest stream |
+| `incidents` | Investigation outcomes, narrative, timeline |
+| `agent_actions` | Per-step agent/tool observability |
+
+Seed data is intentional: **CAMERA-02** is required by scenes **43** and **48**; scene **47** is a valid pivot that does not need CAMERA-02.
 
 ---
 
-## Design / frontend
+## Security
 
-- Dark cinematic OLED aesthetic (landing + war room)
-- Landing: brand lockup, hero media, GSAP / Framer Motion scroll (respects `prefers-reduced-motion`)
-- War Room: live incidents, scenario runners, agent timeline, production health
-- Tokens / notes under `design-system/on-set-war-room/`
-
----
-
-## Security notes
-
-- **Never commit** `.env`, API keys, or ClickHouse passwords
-- `.gitignore` already excludes `.env` / `.env.local`
-- Prefer rotating any key that was pasted into chat or screenshots
-- Investigation tools query scoped ClickHouse data — not full-table dumps
-
----
-
-## Roadmap gaps
-
-- ClickHouse **MCP** bridge is stubbed (`integrations/mcp_client.py`); tools use `clickhouse-connect` directly today
-- Prefer **Render + Vercel** for the public hackathon URL (see Deploy section); add a root `LICENSE` before submission
-- Stronger Google Cloud / Vertex Agent Platform wiring beyond AI Studio-style API keys
-
-Detailed phased plan: [docs/implementation-plan.md](docs/implementation-plan.md).
+- Never commit `.env`, API keys, or ClickHouse passwords
+- Rotate any credentials shared in chat or screenshots
+- Agent tools query scoped ClickHouse data — no full-table dumps
 
 ---
 
 ## License
 
-Add a repository root `LICENSE` before public hackathon submission (e.g. Apache-2.0 or MIT).
+MIT (or add a `LICENSE` file before public submission).
