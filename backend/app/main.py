@@ -96,20 +96,27 @@ def production_health(
 
 
 def _static_dir() -> Path | None:
+    """Optional SPA bundle — API-only deploys (Render backend) skip this safely."""
     raw = os.getenv("STATIC_DIR", "").strip()
     candidates: list[Path] = []
     if raw:
         candidates.append(Path(raw))
+
     here = Path(__file__).resolve()
-    candidates.extend(
-        [
-            here.parents[2] / "static",
-            here.parents[3] / "frontend" / "dist",
-        ]
-    )
+    # .../backend/app/main.py → repo root is parents[2]; backend root is parents[1]
+    if len(here.parents) > 2:
+        repo_root = here.parents[2]
+        candidates.append(repo_root / "frontend" / "dist")
+        candidates.append(repo_root / "static")
+    if len(here.parents) > 1:
+        candidates.append(here.parents[1] / "static")
+
     for path in candidates:
-        if path.is_dir() and (path / "index.html").is_file():
-            return path
+        try:
+            if path.is_dir() and (path / "index.html").is_file():
+                return path
+        except OSError:
+            continue
     return None
 
 
