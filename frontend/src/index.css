@@ -16,7 +16,7 @@
   --color-accent: #e11d48;
   --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
 }
 
 @layer base {
@@ -58,6 +58,10 @@
 @layer utilities {
   .font-display {
     font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
   }
 
   .text-signal {
@@ -168,16 +172,37 @@
 }
 
 .live-dot {
-  animation: pulse-live 1.6s ease-in-out infinite;
+  animation: pulse-live 2.4s ease-in-out infinite;
 }
 
 .scroll-cue {
   animation: scroll-cue 1.8s ease-in-out infinite;
 }
 
+.wr-glow-critical {
+  box-shadow: 0 0 24px rgba(225, 29, 72, 0.2);
+}
+
+@keyframes wr-node-flash {
+  0% {
+    box-shadow: 0 0 0 rgba(225, 29, 72, 0);
+  }
+  35% {
+    box-shadow: 0 0 18px rgba(225, 29, 72, 0.65);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(225, 29, 72, 0);
+  }
+}
+
+.wr-node-flash {
+  animation: wr-node-flash 1s ease-out 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .scroll-cue,
-  .live-dot {
+  .live-dot,
+  .wr-node-flash {
     animation: none;
   }
 }

@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>On-Set War Room</title>
+  <meta name="description" content="On-Set War Room is an agentic film-set incident command center for realtime production risk.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: oklch(0.1284 0.0129 263.62);
+      --surface: oklch(0.1683 0.0181 263.90);
+      --fg: oklch(0.9674 0.0013 286.38);
+      --muted: oklch(0.7118 0.0129 286.07);
+      --border: oklch(0.2649 0.0156 269.09);
+      --accent: oklch(0.5858 0.2220 17.58);
+      --positive: oklch(0.7227 0.1920 149.58);
+      --accent-hover: oklch(0.5158 0.2220 17.58);
+      --accent-active: oklch(0.4658 0.2220 17.58);
+      --surface-raised: oklch(0.2050 0.0181 263.90);
+      --line-soft: color-mix(in oklch, var(--border) 72%, transparent);
+      --font-display: "Syne", "Space Grotesk", system-ui, sans-serif;
+      --font-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+      --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      text-rendering: geometricPrecision;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--fg);
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--fg);
+      outline-offset: 4px;
+    }
+
+    .page {
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, transparent 0%, var(--bg) 88%),
+        var(--bg);
+    }
+
+    .hero {
+      position: relative;
+      min-height: 100svh;
+      display: grid;
+      align-items: end;
+      padding: clamp(24px, 4vw, 72px);
+      isolation: isolate;
+      overflow: hidden;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .video-plane {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background:
+        linear-gradient(90deg, oklch(0.1084 0.0100 263.62) 0%, transparent 42%, oklch(0.1584 0.0129 263.62) 100%),
+        repeating-linear-gradient(0deg, transparent 0 11px, color-mix(in oklch, var(--fg) 5%, transparent) 12px),
+        radial-gradient(circle at 68% 28%, oklch(0.2350 0.0200 28) 0%, transparent 32%),
+        linear-gradient(135deg, var(--surface) 0%, var(--bg) 58%, oklch(0.0950 0.0100 263.62) 100%);
+    }
+
+    .video-plane::before,
+    .video-plane::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .video-plane::before {
+      opacity: 0.24;
+      background:
+        linear-gradient(115deg, transparent 0 37%, color-mix(in oklch, var(--fg) 11%, transparent) 38%, transparent 39% 100%),
+        repeating-linear-gradient(90deg, color-mix(in oklch, var(--fg) 5%, transparent) 0 1px, transparent 1px 128px);
+      transform: translate3d(-2%, 0, 0);
+      animation: gateDrift 18s linear infinite;
+    }
+
+    .video-plane::after {
+      opacity: 0.32;
+      background:
+        linear-gradient(180deg, transparent 0 63%, color-mix(in oklch, var(--bg) 82%, transparent) 100%),
+        radial-gradient(circle at 48% 42%, transparent 0 28%, color-mix(in oklch, var(--bg) 56%, transparent) 64%);
+    }
+
+    .hero-inner {
+      width: min(1280px, 100%);
+      margin: 0 auto;
+      padding-bottom: clamp(28px, 8vh, 92px);
+    }
+
+    .brand {
+      width: min(1020px, 100%);
+      margin: 0 0 clamp(26px, 4vw, 44px);
+      font-family: var(--font-display);
+      font-size: clamp(64px, 11vw, 188px);
+      line-height: 0.86;
+      letter-spacing: 0;
+      font-weight: 800;
+      text-wrap: balance;
+    }
+
+    .headline {
+      width: min(760px, 100%);
+      margin: 0 0 16px;
+      font-family: var(--font-display);
+      font-size: clamp(30px, 4.2vw, 72px);
+      line-height: 0.98;
+      letter-spacing: 0;
+      font-weight: 700;
+      text-wrap: balance;
+    }
+
+    .support {
+      width: min(620px, 100%);
+      margin: 0 0 34px;
+      color: var(--muted);
+      font-size: clamp(17px, 1.5vw, 22px);
+      line-height: 1.45;
+      text-wrap: pretty;
+    }
+
+    .cta-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .button {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 20px;
+      border: 1px solid var(--border);
+      border-radius: 0;
+      font-size: 19px;
+      line-height: 1;
+      font-weight: 700;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .button-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--fg);
+    }
+
+    .button-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: var(--fg);
+      transform: translateY(-1px);
+    }
+
+    .button-primary:active {
+      background: var(--accent-active);
+      border-color: var(--accent-active);
+      color: var(--fg);
+      transform: translateY(0);
+    }
+
+    .button-secondary {
+      background: color-mix(in oklch, var(--bg) 78%, transparent);
+      border-color: var(--border);
+      color: var(--fg);
+    }
+
+    .button-secondary:hover {
+      background: var(--surface-raised);
+      border-color: color-mix(in oklch, var(--fg) 34%, var(--border));
+      color: var(--fg);
+      transform: translateY(-1px);
+    }
+
+    .button-secondary:active {
+      background: var(--surface);
+      border-color: color-mix(in oklch, var(--fg) 48%, var(--border));
+      color: var(--fg);
+      transform: translateY(0);
+    }
+
+    .content {
+      width: min(1280px, calc(100% - clamp(32px, 8vw, 144px)));
+      margin: 0 auto;
+      padding: clamp(72px, 10vw, 132px) 0 clamp(48px, 8vw, 96px);
+    }
+
+    .section-kicker {
+      display: block;
+      margin: 0 0 18px;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.2;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      margin: 0 0 clamp(36px, 5vw, 64px);
+      font-family: var(--font-display);
+      font-size: clamp(36px, 5vw, 78px);
+      line-height: 0.98;
+      letter-spacing: 0;
+      font-weight: 750;
+      text-wrap: balance;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .step {
+      min-height: 310px;
+      padding: clamp(22px, 3vw, 36px);
+      display: grid;
+      align-content: space-between;
+      border-right: 1px solid var(--border);
+    }
+
+    .step:last-child {
+      border-right: 0;
+    }
+
+    .step-index {
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .step-title {
+      margin: 0 0 14px;
+      font-family: var(--font-display);
+      font-size: clamp(27px, 3vw, 44px);
+      line-height: 1;
+      letter-spacing: 0;
+      font-weight: 700;
+    }
+
+    .step-copy {
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(16px, 1.4vw, 19px);
+      line-height: 1.5;
+      text-wrap: pretty;
+    }
+
+    .demo-strip {
+      margin-top: clamp(34px, 5vw, 56px);
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: stretch;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .demo-cell {
+      min-height: 132px;
+      padding: clamp(20px, 3vw, 32px);
+      display: grid;
+      align-content: center;
+      gap: 12px;
+    }
+
+    .demo-label {
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.25;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .demo-value {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(24px, 3vw, 42px);
+      line-height: 1;
+      letter-spacing: 0;
+      font-weight: 750;
+      text-wrap: balance;
+    }
+
+    .demo-cell.alert .demo-value {
+      color: var(--accent);
+    }
+
+    .demo-cell.pivot .demo-value {
+      color: var(--fg);
+    }
+
+    .demo-cell.pivot .demo-label::after {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin-left: 8px;
+      background: var(--positive);
+      vertical-align: 1px;
+    }
+
+    .demo-arrow {
+      width: clamp(44px, 6vw, 72px);
+      display: grid;
+      place-items: center;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font-display);
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .footer-line {
+      padding: 24px 0 0;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    @keyframes gateDrift {
+      0% {
+        transform: translate3d(-2%, 0, 0);
+      }
+      100% {
+        transform: translate3d(2%, 0, 0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .hero {
+        min-height: 100svh;
+        align-items: center;
+      }
+
+      .hero-inner {
+        padding-bottom: 0;
+      }
+
+      .brand {
+        font-size: clamp(58px, 17vw, 132px);
+      }
+
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .step {
+        min-height: 220px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .step:last-child {
+        border-bottom: 0;
+      }
+
+      .demo-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .demo-arrow {
+        width: 100%;
+        min-height: 42px;
+        border: 0;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        transform: rotate(90deg);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .hero {
+        padding: 20px;
+      }
+
+      .brand {
+        margin-bottom: 24px;
+      }
+
+      .support {
+        margin-bottom: 26px;
+      }
+
+      .cta-group {
+        width: 100%;
+      }
+
+      .button {
+        width: 100%;
+      }
+
+      .content {
+        width: calc(100% - 40px);
+        padding-top: 64px;
+      }
+
+      .step {
+        padding: 24px 0;
+      }
+
+      .demo-cell {
+        padding: 24px 0;
+      }
+
+      .demo-strip {
+        border-left: 0;
+        border-right: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page" data-od-id="page">
+    <section class="hero" data-od-id="hero">
+      <div class="video-plane" aria-hidden="true"></div>
+      <div class="hero-inner" data-od-id="hero-content">
+        <h1 class="brand" data-od-id="brand-name">On-Set War Room</h1>
+        <h2 class="headline" data-od-id="hero-headline">Production risk, commanded in realtime.</h2>
+        <p class="support" data-od-id="hero-support">When CAMERA-02 goes down mid-shoot, agentic command turns live incident data into the next best schedule move.</p>
+        <div class="cta-group" data-od-id="hero-cta-group">
+          <a class="button button-primary" href="#how" data-od-id="cta-enter-war-room">Enter War Room</a>
+          <a class="button button-secondary" href="#how" data-od-id="cta-how-it-works">How it works &rarr;</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="how" class="content" data-od-id="how-section">
+      <span class="section-kicker" data-od-id="how-kicker">Google Cloud &times; ClickHouse Agentic Cinema demo</span>
+      <h2 class="section-title" data-od-id="how-heading">How it works</h2>
+
+      <div class="steps" data-od-id="how-steps">
+        <article class="step" data-od-id="step-detect">
+          <span class="step-index" data-od-id="step-detect-index">01</span>
+          <div>
+            <h3 class="step-title" data-od-id="step-detect-title">Detect</h3>
+            <p class="step-copy" data-od-id="step-detect-copy">The monitor agent watches production telemetry and logs the CAMERA-02 outage into ClickHouse the moment the feed drops.</p>
+          </div>
+        </article>
+
+        <article class="step" data-od-id="step-investigate">
+          <span class="step-index" data-od-id="step-investigate-index">02</span>
+          <div>
+            <h3 class="step-title" data-od-id="step-investigate-title">Investigate</h3>
+            <p class="step-copy" data-od-id="step-investigate-copy">The investigator and impact agents trace the affected setup, dependency window, crew exposure, and schedule pressure.</p>
+          </div>
+        </article>
+
+        <article class="step" data-od-id="step-pivot">
+          <span class="step-index" data-od-id="step-pivot-index">03</span>
+          <div>
+            <h3 class="step-title" data-od-id="step-pivot-title">Pivot</h3>
+            <p class="step-copy" data-od-id="step-pivot-copy">The narrator agent explains the risk score and recommends moving Midnight Protocol to Scene 47 while the camera team recovers.</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="demo-strip" data-od-id="demo-strip" aria-label="Midnight Protocol demo incident flow">
+        <div class="demo-cell alert" data-od-id="demo-camera-down">
+          <span class="demo-label" data-od-id="demo-camera-label">Incident</span>
+          <p class="demo-value" data-od-id="demo-camera-value">CAMERA-02 DOWN</p>
+        </div>
+        <div class="demo-arrow" data-od-id="demo-arrow-one" aria-hidden="true">&rarr;</div>
+        <div class="demo-cell" data-od-id="demo-scenes-impacted">
+          <span class="demo-label" data-od-id="demo-scenes-label">Impacted scenes</span>
+          <p class="demo-value" data-od-id="demo-scenes-value">Scenes 43 &middot; 48</p>
+        </div>
+        <div class="demo-arrow" data-od-id="demo-arrow-two" aria-hidden="true">&rarr;</div>
+        <div class="demo-cell pivot" data-od-id="demo-pivot">
+          <span class="demo-label" data-od-id="demo-pivot-label">Recommended pivot</span>
+          <p class="demo-value" data-od-id="demo-pivot-value">Pivot Scene 47</p>
+        </div>
+      </div>
+
+      <p class="footer-line" data-od-id="demo-production-note">Demo production: Midnight Protocol. Google ADK 4-agent pipeline: monitor &rarr; investigator &rarr; impact &rarr; narrator.</p>
+    </section>
+  </main>
+</body>
+</html>

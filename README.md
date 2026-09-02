@@ -4,10 +4,7 @@ Agentic production incident command center for film sets. When **CAMERA-02** goe
 
 Built for the **Google Cloud × ClickHouse (Agentic Cinema)** partner track.
 
-**Repository:** [github.com/PARZIVAL7498/on-set-war-room](https://github.com/PARZIVAL7498/on-set-war-room)
-
 ---
-
 ## Demo outcome (Midnight Protocol seed)
 
 | Signal | Expected value |
@@ -86,9 +83,8 @@ Check `/health/adk` for current mode.
 
 - **Python 3.10+** (3.12 recommended)
 - **Node.js 20+**
-- **ClickHouse Cloud** account ([clickhouse.cloud](https://clickhouse.cloud))
-- **Gemini API key** ([Google AI Studio](https://aistudio.google.com/apikey)) — optional but recommended for live LLM turns
-
+- **ClickHouse Cloud** account
+- **Gemini API key** — optional but recommended for live LLM turns
 ---
 
 ## Local development
