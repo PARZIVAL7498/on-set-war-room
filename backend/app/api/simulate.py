@@ -15,8 +15,23 @@ from app.services import event_service
 
 router = APIRouter(prefix="/api/simulate", tags=["simulate"])
 
-# backend/app/api/simulate.py → repo root is parents[3]
-_SCENARIOS_DIR = Path(__file__).resolve().parents[3] / "simulator" / "scenarios"
+
+def _scenarios_dir() -> Path:
+    """Resolve scenario JSON directory for local + packaged deploys.
+
+    Prefer the copy shipped inside the Python package (`app/data/scenarios`)
+    so Docker / Render (rootDir=backend) do not depend on the repo-root
+    `simulator/` tree. Fall back to the monorepo path for local development.
+    """
+    packaged = Path(__file__).resolve().parents[1] / "data" / "scenarios"
+    if packaged.is_dir() and any(packaged.glob("*.json")):
+        return packaged
+    # backend/app/api/simulate.py → repo root is parents[3]
+    repo = Path(__file__).resolve().parents[3] / "simulator" / "scenarios"
+    return repo
+
+
+_SCENARIOS_DIR = _scenarios_dir()
 
 
 def _scenario_path(name: str) -> Path:
@@ -38,6 +53,8 @@ def _load_payload(raw: dict) -> ResourceEventIn:
 
 @router.get("/scenarios")
 def list_scenarios():
+    if not _SCENARIOS_DIR.is_dir():
+        return []
     items = []
     for path in sorted(_SCENARIOS_DIR.glob("*.json")):
         try:

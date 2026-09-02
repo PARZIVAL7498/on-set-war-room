@@ -231,25 +231,33 @@ export default function WarRoomPage() {
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
                 </button>
                 {simOpen ? (
-                  <div className="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-                    {scenarios.map((s) => {
-                      const Icon = SCENARIO_ICONS[s.name] ?? Zap
-                      return (
-                        <button
-                          key={s.name}
-                          type="button"
-                          disabled={!!busy}
-                          onClick={() => void triggerScenario(s.name)}
-                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-left text-sm transition hover:bg-muted disabled:opacity-50"
-                          title={s.description}
-                        >
-                          <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
-                          <span className="font-display capitalize">
-                            {s.name.replace(/_/g, ' ')}
-                          </span>
-                        </button>
-                      )
-                    })}
+                  <div className="absolute right-0 z-40 mt-2 w-56 overflow-hidden border border-border bg-card shadow-xl">
+                    {scenarios.length ? (
+                      scenarios.map((s) => {
+                        const Icon = SCENARIO_ICONS[s.name] ?? Zap
+                        return (
+                          <button
+                            key={s.name}
+                            type="button"
+                            disabled={!!busy}
+                            onClick={() => void triggerScenario(s.name)}
+                            className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-left text-sm transition hover:bg-muted disabled:opacity-50"
+                            title={s.description}
+                          >
+                            <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+                            <span className="font-display capitalize">
+                              {s.name.replace(/_/g, ' ')}
+                            </span>
+                          </button>
+                        )
+                      })
+                    ) : (
+                      <p className="px-3 py-3 text-xs text-muted-foreground">
+                        No scenarios available from the API. Redeploy so{' '}
+                        <code className="text-foreground">app/data/scenarios</code> ships
+                        with the backend.
+                      </p>
+                    )}
                   </div>
                 ) : null}
               </div>

@@ -1,0 +1,8 @@
+{
+  "production_id": "prod-midnight-protocol",
+  "resource_type": "equipment",
+  "resource_id": "CAMERA-02",
+  "status": "DOWN",
+  "event_time": "2026-08-25T09:45:00",
+  "notes": "Primary A-Cam offline — link drop reported on set"
+}
